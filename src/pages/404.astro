@@ -1,0 +1,31 @@
+---
+import { route } from "../data/projects";
+import "../styles/site.css";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href={route() + "favicon.svg"} type="image/svg+xml" />
+    <title>Page not found — Kaiyo</title>
+  </head>
+  <body>
+    <main class="frame">
+      <div class="lead">
+        <h1>Page not found.</h1>
+        <p lang="zh-CN">这个页面不存在。</p>
+      </div>
+      <p>
+        <a class="action" href={route()}>
+          Kaiyo home →
+        </a>{" "}
+        <a class="action" href={route("", "zh")} lang="zh-CN">
+          返回首页 →
+        </a>
+      </p>
+    </main>
+  </body>
+</html>

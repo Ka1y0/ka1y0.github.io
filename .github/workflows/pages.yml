@@ -1,0 +1,62 @@
+name: Verify and publish
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - name: Check generated pages and local resources
+        run: |
+          base=$(node --input-type=module -e 'import { identity as config } from "./site.config.mjs"; console.log(new URL(config.base, config.origin).href)')
+          python3 scripts/verify_html.py "$base"
+      - name: Record revision
+        run: echo "$GITHUB_SHA" > dist/revision.txt
+      - uses: actions/upload-pages-artifact@v5
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        with:
+          path: dist
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages-production
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - name: Publish website
+        id: publish
+        uses: actions/deploy-pages@v5
+      - name: Verify published revision and homepage
+        env:
+          SITE: ${{ steps.publish.outputs.page_url }}
+        run: |
+          for attempt in {1..15}; do
+            revision=$(curl --max-time 15 -fsSL "${SITE%/}/revision.txt?sha=$GITHUB_SHA" || true)
+            if [[ "$revision" == "$GITHUB_SHA" ]]; then
+              curl -fsSL "${SITE%/}/" -o /dev/null
+              exit 0
+            fi
+            sleep 8
+          done
+          exit 1

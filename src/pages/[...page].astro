@@ -1,0 +1,346 @@
+---
+import { identity } from "../../site.config.mjs";
+import {
+  projects,
+  pages,
+  inventory,
+  route,
+  absolute,
+  type Language,
+} from "../data/projects";
+import { copy as c } from "../data/copy";
+import "../styles/site.css";
+export function getStaticPaths() {
+  return (["en", "zh"] as const).flatMap((lang) =>
+    pages.map((path) => ({
+      params: {
+        page:
+          [lang === "zh" ? "zh" : "", path].filter(Boolean).join("/") ||
+          undefined,
+      },
+      props: { lang, path },
+    })),
+  );
+}
+const { lang, path } = Astro.props as { lang: Language; path: string };
+const zh = lang === "zh",
+  other = zh ? "en" : "zh",
+  t = (v: { en: string; zh: string }) => v[lang];
+const paths = ["", "work", "research", "about"];
+const p = inventory.find((i) => "work/" + i.slug === path);
+const section = path.split("/")[0],
+  title = p?.name || (path ? t(c.nav[paths.indexOf(section)]) : t(c.homeTitle));
+const description = p
+  ? t(p.summary)
+  : t(
+      path === "about"
+        ? c.aboutIntro
+        : path === "research"
+          ? c.researchIntro
+          : path === "work"
+            ? c.workIntro
+            : c.intro,
+    );
+const href = (s = "") => route(s, lang),
+  studio = identity.studio + (zh ? "zh/" : "");
+const media = (s: string) => identity.base + "media/" + s;
+const canonical = absolute(href(path)),
+  next = p
+    ? projects[
+        (projects.findIndex((i) => i.slug === p.slug) + 1) % projects.length
+      ]
+    : null;
+const person = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": absolute(route()) + "#kaiyo",
+  name: "Kaiyo",
+  url: absolute(route()),
+  sameAs: [identity.github],
+  knowsAbout: [
+    "Generative visual art",
+    "Interaction design",
+    "Human–AI collaboration",
+  ],
+  affiliation: {
+    "@type": "Organization",
+    name: "Chips Studio",
+    url: identity.studio,
+  },
+};
+---
+
+<!doctype html>
+<html lang={zh ? "zh-CN" : "en"}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{title} — Kaiyo</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {["en", "zh", "x-default"].map((l) => (
+      <link
+        rel="alternate"
+        hreflang={l === "zh" ? "zh-CN" : l}
+        href={absolute(route(path, l === "zh" ? "zh" : "en"))}
+      />
+    ))}
+    <link
+      rel="icon"
+      href={identity.base + "favicon.svg"}
+      type="image/svg+xml"
+    />
+    <meta property="og:title" content={title + " — Kaiyo"} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:image"
+      content={absolute(
+        media(p?.slug === "pixel-harbor" ? "pixel-harbor.webp" : "loop.webp"),
+      )}
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify(person)}
+    ></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">
+      {t(c.skip)}
+    </a>
+    <header class="frame">
+      <a class="brand" href={href()}>
+        <img
+          width="30"
+          height="30"
+          src={identity.base + "favicon.svg"}
+          alt=""
+        />
+        Kaiyo
+      </a>
+      <nav aria-label={zh ? "主导航" : "Main navigation"}>
+        {paths.map((s, i) => (
+          <a href={href(s)} aria-current={s === section ? "page" : undefined}>
+            {t(c.nav[i])}
+          </a>
+        ))}
+      </nav>
+      <a class="lang" href={route(path, other)} lang={zh ? "en" : "zh-CN"}>
+        {zh ? "EN" : "中文"}
+      </a>
+    </header>
+    <main id="main" class="frame">
+      {path === "" && (
+        <>
+          <section class="hero">
+            <div class="heroText">
+              <h1>
+                {zh ? "创作，在" : "Art in"}
+                <br />
+                {zh ? "" : "the "}
+                <em>{zh ? "循环之中。" : "loop."}</em>
+              </h1>
+              <p>{t(c.intro)}</p>
+              <a class="action" href={href("work")}>
+                {t(c.index)} <span>↘</span>
+              </a>
+            </div>
+            <figure class="heroArt">
+              <img
+                fetchpriority="high"
+                width="1440"
+                height="1120"
+                src={media("loop.webp")}
+                alt={t(c.loopAlt)}
+              />
+              <figcaption>
+                <span>{t(c.artName)}</span>
+                <span>{t(c.visual)} · 2026</span>
+              </figcaption>
+            </figure>
+          </section>
+        </>
+      )}
+      {(path === "" || path === "work") && (
+        <section class="works">
+          {path === "" ? (
+            <div class="sectionHead">
+              <h2>{t(c.selected)}</h2>
+              <a class="arrowLink" href={href("work")}>
+                {t(c.all)} ↗
+              </a>
+            </div>
+          ) : (
+            <div class="lead">
+              <h1>{t(c.nav[1])}</h1>
+              <p>{t(c.workIntro)}</p>
+            </div>
+          )}
+          <a class="feature" href={href("work/pixel-harbor")}>
+            <figure>
+              <img
+                width="1518"
+                height="760"
+                loading={path === "" ? "lazy" : "eager"}
+                src={media("pixel-harbor.webp")}
+                alt={t(c.alt)}
+              />
+            </figure>
+            <div class="featureText">
+              <span class="meta">
+                {t(projects[0].discipline)} / {t(projects[0].status)}
+              </span>
+              <h3>
+                Pixel Harbor <span>↗</span>
+              </h3>
+              <p>{t(projects[0].summary)}</p>
+            </div>
+          </a>
+          <div class="listing">
+            {projects.slice(1).map((proj) => (
+              <a class="entry" href={href("work/" + proj.slug)}>
+                <span class="meta topic">{t(proj.discipline)}</span>
+                <div>
+                  <h3>{proj.name}</h3>
+                  <p>{t(proj.summary)}</p>
+                </div>
+                <span class="status">{t(proj.status)}</span>
+                <span class="endArrow">↗</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+      {path === "research" && (
+        <>
+          <div class="lead">
+            <h1>{t(c.nav[2])}</h1>
+            <p>{t(c.researchIntro)}</p>
+          </div>
+          {c.research.map(([q, body, id]) => (
+            <section class="proseRow">
+              <h2>{t(q)}</h2>
+              <div>
+                <p>{t(body)}</p>
+                <a class="arrowLink" href={href("work/" + id)}>
+                  {projects.find((pr) => pr.slug === id)?.name} ↗
+                </a>
+              </div>
+            </section>
+          ))}
+        </>
+      )}
+      {path === "about" && (
+        <>
+          <div class="lead">
+            <h1>{zh ? "关于 Kaiyo" : "About Kaiyo"}</h1>
+            <p>{t(c.aboutIntro)}</p>
+          </div>
+          <section class="proseRow">
+            <h2>Chips Studio</h2>
+            <div>
+              <p>{t(c.aboutBody)}</p>
+              <a class="arrowLink" href={studio}>
+                {t(c.aboutLink)} ↗
+              </a>
+            </div>
+          </section>
+          <section class="proseRow">
+            <h2>{zh ? "公开联系" : "Contact"}</h2>
+            <div>
+              <a class="arrowLink" href={identity.github}>
+                {t(c.contact)} ↗
+              </a>
+            </div>
+          </section>
+        </>
+      )}
+      {p && (
+        <article>
+          <div class="lead">
+            <a class="back" href={href("work")}>
+              ← {t(c.all)}
+            </a>
+            <h1>{p.name}</h1>
+            <p>{t(p.summary)}</p>
+          </div>
+          <dl class="facts">
+            {[
+              [t(c.platform), p.platform],
+              [t(c.state), t(p.status)],
+              [t(c.open), zh ? p.licenseZh : p.license],
+              [t(c.date), p.verified],
+            ].map(([k, v]) => (
+              <div>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+          {p.slug === "pixel-harbor" && (
+            <figure class="casePic">
+              <img
+                width="1518"
+                height="760"
+                src={media("pixel-harbor.webp")}
+                alt={t(c.alt)}
+              />
+              <figcaption>{t(c.figure)}</figcaption>
+            </figure>
+          )}
+          {[
+            [c.question, p.question],
+            [c.role, c.roleBody],
+            [c.design, p.design],
+            [c.result, p.result],
+          ].map(([label, body]) => (
+            <section class="proseRow">
+              <h2>{t(label)}</h2>
+              <p>{t(body)}</p>
+            </section>
+          ))}
+          <section class="proseRow">
+            <h2>{t(c.evidence)}</h2>
+            <div class="links">
+              {p.links.map((l) => (
+                <a class="arrowLink" href={l.url}>
+                  {t(l.name)} ↗
+                </a>
+              ))}
+              <a class="arrowLink" href={p.source}>
+                {t(c.source)} ↗
+              </a>
+            </div>
+          </section>
+          {next && (
+            <a class="next" href={href("work/" + next.slug)}>
+              <span class="meta">{t(c.next)}</span> {next.name} →
+            </a>
+          )}
+        </article>
+      )}
+      {!p && path !== "about" && (
+        <aside>
+          <div>
+            <h2>{t(c.cross)}</h2>
+            <p>{t(c.crossIntro)}</p>
+          </div>
+          <a class="action" href={studio}>
+            Chips Studio ↗
+          </a>
+        </aside>
+      )}
+    </main>
+    <footer class="frame">
+      <a class="brand" href={href()}>
+        Kaiyo
+      </a>
+      <div>
+        <a href={identity.github}>GitHub ↗</a>
+        <a href={studio}>Chips Studio ↗</a>
+      </div>
+    </footer>
+  </body>
+</html>
